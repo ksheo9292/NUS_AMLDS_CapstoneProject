@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="traffic_analysis.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="1030"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="traffic" custom_title="0" dock_id="1" table="4,7:maintraffic"/><dock_state state="000000ff00000000fd000000010000000200000449000002f2fc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000000004490000012b00ffffff000002f60000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="traffic" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="80"/><column index="2" value="46"/><column index="3" value="55"/><column index="4" value="63"/><column index="5" value="74"/><column index="7" value="176"/><column index="8" value="112"/><column index="9" value="103"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="1.1 verify">SELECT COUNT(*) AS row_count
+FROM traffic;
+
+
+</sql><sql name="1.2 Calculate totals and year and year changes">WITH annual_traffic AS (
+    SELECT
+        CAST(strftime('%Y', date_time) AS INTEGER) AS year,
+        COUNT(*) AS record_count,
+        SUM(traffic_volume) AS total_traffic_volume,
+        ROUND(AVG(traffic_volume), 2) AS average_traffic_volume
+    FROM traffic
+    WHERE CAST(strftime('%Y', date_time) AS INTEGER)
+          BETWEEN 2012 AND 2017
+    GROUP BY CAST(strftime('%Y', date_time) AS INTEGER)
+),
+annual_changes AS (
+    SELECT
+        year,
+        record_count,
+        total_traffic_volume,
+        average_traffic_volume,
+        LAG(total_traffic_volume) OVER (ORDER BY year)
+            AS previous_year_total
+    FROM annual_traffic
+)
+SELECT
+    year,
+    record_count,
+    total_traffic_volume,
+    average_traffic_volume,
+    total_traffic_volume - previous_year_total
+        AS change_from_previous_year,
+    ROUND(
+        100.0 * (total_traffic_volume - previous_year_total)
+        / previous_year_total,
+        2
+    ) AS percentage_change
+FROM annual_changes
+ORDER BY year;</sql><sql name="1.3 Analyse temperature around holidays">SELECT
+    date_time,
+    holiday,
+    temp AS temperature_kelvin,
+    ROUND(temp - 273.15, 2) AS temperature_celsius,
+    traffic_volume,
+    weather_main,
+    weather_description
+FROM traffic
+WHERE CAST(strftime('%Y', date_time) AS INTEGER)
+      IN (2015, 2016, 2017)
+  AND holiday IN ('New Years Day', 'Labor Day')
+ORDER BY holiday, date_time;
+
+
+
+
+WITH holiday_hourly AS (
+    SELECT
+        date_time,
+        holiday,
+        AVG(temp) AS temp,
+        MAX(traffic_volume) AS traffic_volume
+    FROM traffic
+    WHERE CAST(strftime('%Y', date_time) AS INTEGER)
+          IN (2015, 2016, 2017)
+      AND holiday IN ('New Years Day', 'Labor Day')
+    GROUP BY date_time, holiday
+)
+SELECT
+    CAST(strftime('%Y', date_time) AS INTEGER) AS year,
+    holiday,
+    COUNT(*) AS observations,
+    ROUND(AVG(temp), 2) AS average_temp_kelvin,
+    ROUND(AVG(temp) - 273.15, 2) AS average_temp_celsius,
+    ROUND(AVG(traffic_volume), 2) AS average_traffic_volume
+FROM holiday_hourly
+GROUP BY
+    CAST(strftime('%Y', date_time) AS INTEGER),
+    holiday
+ORDER BY holiday, year;</sql><sql name="2.1 Traffic volume statistics">WITH basic_statistics AS (
+    SELECT
+        COUNT(*) AS record_count,
+        AVG(traffic_volume) AS mean_volume,
+        MIN(traffic_volume) AS minimum_volume,
+        MAX(traffic_volume) AS maximum_volume
+    FROM traffic
+),
+
+dispersion AS (
+    SELECT
+        SUM(
+            (traffic_volume - mean_volume) *
+            (traffic_volume - mean_volume)
+        ) AS sum_squared_deviations
+    FROM traffic
+    CROSS JOIN basic_statistics
+),
+
+ranked_traffic AS (
+    SELECT
+        traffic_volume,
+        ROW_NUMBER() OVER (
+            ORDER BY traffic_volume
+        ) AS row_number,
+        COUNT(*) OVER () AS total_rows
+    FROM traffic
+),
+
+median_result AS (
+    SELECT
+        AVG(traffic_volume * 1.0) AS median_volume
+    FROM ranked_traffic
+    WHERE row_number IN (
+        (total_rows + 1) / 2,
+        (total_rows + 2) / 2
+    )
+)
+
+SELECT
+    record_count,
+    ROUND(mean_volume, 2) AS mean,
+    ROUND(median_volume, 2) AS median,
+    ROUND(
+        SQRT(sum_squared_deviations / record_count),
+        2
+    ) AS population_standard_deviation,
+    ROUND(
+        sum_squared_deviations / record_count,
+        2
+    ) AS population_variance,
+    minimum_volume AS minimum,
+    maximum_volume AS maximum,
+    maximum_volume - minimum_volume AS range
+FROM basic_statistics
+CROSS JOIN dispersion
+CROSS JOIN median_result;</sql><sql name="2.2 correlation analysis">WITH means AS (
+    SELECT
+        AVG(temp) AS mean_temperature,
+        AVG(traffic_volume) AS mean_traffic
+    FROM traffic
+),
+correlation_components AS (
+    SELECT
+        SUM(
+            (temp - mean_temperature) *
+            (traffic_volume - mean_traffic)
+        ) AS temperature_traffic_sum,
+
+        SUM(
+            (temp - mean_temperature) *
+            (temp - mean_temperature)
+        ) AS temperature_squared_sum,
+
+        SUM(
+            (traffic_volume - mean_traffic) *
+            (traffic_volume - mean_traffic)
+        ) AS traffic_squared_sum
+    FROM traffic
+    CROSS JOIN means
+)
+SELECT
+    ROUND(
+        temperature_traffic_sum /
+        SQRT(
+            temperature_squared_sum *
+            traffic_squared_sum
+        ),
+        4
+    ) AS correlation_coefficient
+FROM correlation_components;
+
+WITH means AS (
+    SELECT
+        AVG(temp) AS mean_temperature,
+        AVG(traffic_volume) AS mean_traffic
+    FROM traffic
+),
+components AS (
+    SELECT
+        SUM(
+            (temp - mean_temperature) *
+            (traffic_volume - mean_traffic)
+        ) AS numerator,
+
+        SUM(
+            (temp - mean_temperature) *
+            (temp - mean_temperature)
+        ) AS temperature_sum,
+
+        SUM(
+            (traffic_volume - mean_traffic) *
+            (traffic_volume - mean_traffic)
+        ) AS traffic_sum
+    FROM traffic
+    CROSS JOIN means
+),
+correlation AS (
+    SELECT
+        numerator / SQRT(temperature_sum * traffic_sum) AS r
+    FROM components
+)
+SELECT
+    ROUND(r, 4) AS correlation,
+    ROUND(r * r, 4) AS r_squared,
+    ROUND(r * r * 100, 2) AS percentage
+FROM correlation;</sql><sql name="3.1 Basic probability">WITH event_counts AS (
+    SELECT
+        COUNT(*) * 1.0 AS total_records,
+
+        SUM(
+            CASE WHEN traffic_volume &gt; 5500
+            THEN 1 ELSE 0 END
+        ) * 1.0 AS congestion_count,
+
+        SUM(
+            CASE WHEN weather_main = 'Clear'
+            THEN 1 ELSE 0 END
+        ) * 1.0 AS clear_count,
+
+        SUM(
+            CASE
+                WHEN traffic_volume &gt; 5500
+                 AND weather_main = 'Clear'
+                THEN 1 ELSE 0
+            END
+        ) * 1.0 AS congestion_clear_count,
+
+        SUM(
+            CASE
+                WHEN traffic_volume &gt; 5500
+                 AND temp &gt; 292
+                THEN 1 ELSE 0
+            END
+        ) * 1.0 AS congestion_high_temp_count
+    FROM traffic
+)
+
+SELECT
+    CAST(total_records AS INTEGER) AS total_records,
+    CAST(congestion_count AS INTEGER) AS congestion_records,
+    CAST(clear_count AS INTEGER) AS clear_weather_records,
+    CAST(congestion_clear_count AS INTEGER)
+        AS congestion_and_clear_records,
+
+    ROUND(
+        congestion_count / total_records,
+        4
+    ) AS probability_congestion,
+
+    ROUND(
+        clear_count / total_records,
+        4
+    ) AS probability_clear_weather,
+
+    ROUND(
+        congestion_clear_count / total_records,
+        4
+    ) AS probability_congestion_and_clear,
+
+    ROUND(
+        congestion_clear_count / congestion_count,
+        4
+    ) AS probability_clear_given_congestion,
+
+    ROUND(
+        congestion_high_temp_count / congestion_count,
+        4
+    ) AS probability_high_temp_given_congestion
+
+FROM event_counts;</sql><sql name="3.2.3 Independent test">WITH event_counts AS (
+    SELECT
+        COUNT(*) * 1.0 AS total_records,
+
+        SUM(
+            CASE WHEN traffic_volume &gt; 5500
+            THEN 1 ELSE 0 END
+        ) * 1.0 AS congestion_count,
+
+        SUM(
+            CASE WHEN weather_main = 'Clear'
+            THEN 1 ELSE 0 END
+        ) * 1.0 AS clear_count,
+
+        SUM(
+            CASE
+                WHEN traffic_volume &gt; 5500
+                 AND weather_main = 'Clear'
+                THEN 1 ELSE 0
+            END
+        ) * 1.0 AS congestion_clear_count
+    FROM traffic
+),
+
+probabilities AS (
+    SELECT
+        congestion_count / total_records
+            AS probability_congestion,
+
+        clear_count / total_records
+            AS probability_clear,
+
+        congestion_clear_count / total_records
+            AS probability_intersection
+    FROM event_counts
+)
+
+SELECT
+    ROUND(probability_intersection, 6)
+        AS observed_intersection,
+
+    ROUND(
+        probability_congestion * probability_clear,
+        6
+    ) AS expected_if_independent,
+
+    ROUND(
+        probability_intersection -
+        (probability_congestion * probability_clear),
+        6
+    ) AS difference,
+
+    CASE
+        WHEN ABS(
+            probability_intersection -
+            (probability_congestion * probability_clear)
+        ) &lt; 0.000001
+        THEN 'Independent'
+        ELSE 'Not independent'
+    END AS conclusion
+FROM probabilities;</sql><sql name="3.2 odd ratio">SELECT
+    weather_main,
+    SUM(
+        CASE WHEN traffic_volume &gt; 5500
+        THEN 1 ELSE 0 END
+    ) AS congested,
+
+    SUM(
+        CASE WHEN traffic_volume &lt;= 5500
+        THEN 1 ELSE 0 END
+    ) AS not_congested,
+
+    COUNT(*) AS total
+FROM traffic
+WHERE weather_main IN ('Clear', 'Clouds')
+GROUP BY weather_main;
+
+WITH contingency_table AS (
+    SELECT
+        SUM(
+            CASE
+                WHEN weather_main = 'Clear'
+                 AND traffic_volume &gt; 5500
+                THEN 1 ELSE 0
+            END
+        ) * 1.0 AS clear_congested,
+
+        SUM(
+            CASE
+                WHEN weather_main = 'Clear'
+                 AND traffic_volume &lt;= 5500
+                THEN 1 ELSE 0
+            END
+        ) * 1.0 AS clear_not_congested,
+
+        SUM(
+            CASE
+                WHEN weather_main = 'Clouds'
+                 AND traffic_volume &gt; 5500
+                THEN 1 ELSE 0
+            END
+        ) * 1.0 AS cloudy_congested,
+
+        SUM(
+            CASE
+                WHEN weather_main = 'Clouds'
+                 AND traffic_volume &lt;= 5500
+                THEN 1 ELSE 0
+            END
+        ) * 1.0 AS cloudy_not_congested
+    FROM traffic
+)
+
+SELECT
+    ROUND(
+        clear_congested / clear_not_congested,
+        4
+    ) AS clear_weather_odds,
+
+    ROUND(
+        cloudy_congested / cloudy_not_congested,
+        4
+    ) AS cloudy_weather_odds,
+
+    ROUND(
+        (clear_congested * cloudy_not_congested) /
+        (clear_not_congested * cloudy_congested),
+        4
+    ) AS odds_ratio_clear_vs_cloudy
+
+FROM contingency_table;</sql><current_tab id="7"/></tab_sql></sqlb_project>
