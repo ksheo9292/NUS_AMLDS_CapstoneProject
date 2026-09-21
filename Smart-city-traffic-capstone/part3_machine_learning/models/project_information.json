@@ -1,0 +1,19 @@
+{
+  "features": [
+    "temp_celsius",
+    "rain_1h",
+    "snow_1h",
+    "clouds_all",
+    "is_holiday",
+    "is_weekend",
+    "is_low_visibility",
+    "is_severe_weather",
+    "hour_sin",
+    "hour_cos",
+    "dow_sin",
+    "dow_cos"
+  ],
+  "training_rows": 38549,
+  "testing_rows": 9638,
+  "proxy_high_risk_rate": 0.11285201402867993
+}

@@ -1,0 +1,9 @@
+{
+  "status": "ALERT",
+  "old_mae": 190.81526432827715,
+  "recent_mae": 301.2185693080349,
+  "mae_ratio": 1.5785873859117514,
+  "old_average_temperature": 8.269520065371369,
+  "recent_average_temperature": 7.473611848931338,
+  "temperature_change": 0.7959082164400311
+}

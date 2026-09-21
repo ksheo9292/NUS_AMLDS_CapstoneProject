@@ -1,0 +1,14 @@
+artifact_uri: file:///workspace/scratch/fb7743c35d07/part3_machine_learning/mlflow/mlruns/720417788572399306/d79ed17e5e7649e0b7340e65681aa7b2/artifacts
+end_time: 1790003047299
+entry_point_name: ''
+experiment_id: '720417788572399306'
+lifecycle_stage: active
+run_id: d79ed17e5e7649e0b7340e65681aa7b2
+run_name: Basic Neural Network
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1790003047295
+status: 3
+tags: []
+user_id: ksheo

@@ -1,0 +1,12 @@
+{
+  "hour": 10,
+  "day_of_week": 1,
+  "temp_celsius": 15,
+  "rain_1h": 0,
+  "snow_1h": 0,
+  "clouds_all": 40,
+  "is_holiday": 0,
+  "is_low_visibility": 0,
+  "is_severe_weather": 0
+}
+
