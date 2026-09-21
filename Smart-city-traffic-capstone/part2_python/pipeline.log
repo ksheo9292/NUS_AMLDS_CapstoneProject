@@ -1,0 +1,23 @@
+2026-09-21 22:01:02,539 | INFO | __main__ | Raw data loaded successfully: 48204 rows, 9 columns
+2026-09-21 22:01:02,541 | INFO | __main__ | Schema validated: all 9 expected columns are present
+2026-09-21 22:01:02,580 | INFO | __main__ | Categorical text values standardised
+2026-09-21 22:01:02,593 | INFO | __main__ | All date/time values parsed successfully
+2026-09-21 22:01:02,624 | WARNING | __main__ | Dropped 17 fully duplicated rows
+2026-09-21 22:01:02,627 | WARNING | __main__ | Detected 10 impossible values in temp
+2026-09-21 22:01:02,645 | WARNING | __main__ | Imputed 10 invalid or missing temp values using monthly medians
+2026-09-21 22:01:02,645 | WARNING | __main__ | Detected 1 impossible values in rain_1h
+2026-09-21 22:01:02,660 | WARNING | __main__ | Imputed 1 invalid or missing rain_1h values using monthly medians
+2026-09-21 22:01:02,661 | INFO | __main__ | No impossible values detected in snow_1h
+2026-09-21 22:01:02,661 | INFO | __main__ | No values required imputation in snow_1h
+2026-09-21 22:01:02,661 | INFO | __main__ | No impossible values detected in traffic_volume
+2026-09-21 22:01:02,661 | INFO | __main__ | No values required imputation in traffic_volume
+2026-09-21 22:01:02,662 | INFO | __main__ | No values required imputation in clouds_all
+2026-09-21 22:01:02,669 | INFO | __main__ | Cleaning complete: 48187 rows, 9 columns
+2026-09-21 22:01:02,669 | INFO | feature_engineering | Dataset shape before feature engineering: (48187, 9)
+2026-09-21 22:01:02,761 | INFO | feature_engineering | Dataset shape after feature engineering: (48187, 38)
+2026-09-21 22:01:03,337 | INFO | __main__ | Processed data saved: processed_traffic.csv
+2026-09-21 22:01:03,500 | INFO | visualizations | Figure saved: figures/01_traffic_by_hour.png
+2026-09-21 22:01:03,601 | INFO | visualizations | Figure saved: figures/02_weekday_vs_weekend.png
+2026-09-21 22:01:03,732 | INFO | visualizations | Figure saved: figures/03_traffic_by_weather.png
+2026-09-21 22:01:03,891 | INFO | visualizations | Figure saved: figures/04_temperature_vs_traffic.png
+2026-09-21 22:01:03,891 | INFO | __main__ | Pipeline completed successfully
